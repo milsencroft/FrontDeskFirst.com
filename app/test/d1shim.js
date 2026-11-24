@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 // Minimal D1-compatible wrapper over node:sqlite for tests.
 export function makeDb() {
   const db = new DatabaseSync(':memory:');
-  db.exec(readFileSync(new URL('../migrations/0001_init.sql', import.meta.url), 'utf8'));
+  for (const f of ['0001_init.sql', '0002_settings.sql']) db.exec(readFileSync(new URL('../migrations/' + f, import.meta.url), 'utf8'));
   const wrap = (sql, args = []) => ({
     bind: (...a) => wrap(sql, a),
     first: async () => db.prepare(sql).get(...args) ?? null,

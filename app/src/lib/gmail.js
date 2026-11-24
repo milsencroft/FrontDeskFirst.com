@@ -1,3 +1,4 @@
+import { gmailRefreshToken } from './oauth.js';
 // Sends mail from the Business 4 Gmail with the Gmail API using an OAuth refresh token (no passwords stored).
 function b64url(s) { return btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
 export function buildMime({ from, to, subject, text }) {
@@ -5,12 +6,17 @@ export function buildMime({ from, to, subject, text }) {
   return [`From: ${from}`, `To: ${to}`, `Subject: ${encSubject}`, 'MIME-Version: 1.0', 'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: 8bit', '', text].join('\r\n');
 }
 export async function sendGmail(env, msg, fetchImpl = fetch) {
-  if (!env.GMAIL_REFRESH_TOKEN) return { ok: false, skipped: 'gmail not configured' };
+  const refresh = await gmailRefreshToken(env);
+  if (!refresh) return { ok: false, skipped: 'gmail not configured' };
   const tok = await fetchImpl('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ client_id: env.GMAIL_CLIENT_ID, client_secret: env.GMAIL_CLIENT_SECRET, refresh_token: env.GMAIL_REFRESH_TOKEN, grant_type: 'refresh_token' }) });
+    body: new URLSearchParams({ client_id: env.GMAIL_CLIENT_ID, client_secret: env.GMAIL_CLIENT_SECRET, refresh_token: refresh, grant_type: 'refresh_token' }) });
   if (!tok.ok) throw new Error(`gmail token HTTP ${tok.status}`);
   const { access_token } = await tok.json();
   const res = await fetchImpl('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', { method: 'POST', headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ raw: b64url(buildMime(msg)) }) });
-  if (!res.ok) throw new Error(`gmail send HTTP ${res.status}`);
+  if (!res.ok) {
+    let reason = '';
+    try { const e = (await res.json()).error || {}; reason = (e.details || []).map((d) => d.reason).filter(Boolean)[0] || (e.errors || [])[0]?.reason || e.status || ''; } catch {}
+    throw new Error(`gmail send HTTP ${res.status}${reason ? ` (${reason})` : ''}`);
+  }
   return { ok: true, id: (await res.json()).id };
 }
