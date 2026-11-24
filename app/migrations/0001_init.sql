@@ -1,0 +1,13 @@
+CREATE TABLE IF NOT EXISTS prospects (id INTEGER PRIMARY KEY, clinic_name TEXT NOT NULL, city TEXT, country TEXT, website TEXT, public_email TEXT, source_url TEXT, audit_json TEXT, status TEXT DEFAULT 'new', last_contact_at TEXT, next_followup_at TEXT, opted_out INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')));
+CREATE TABLE IF NOT EXISTS inbound_leads (id INTEGER PRIMARY KEY, name TEXT, clinic TEXT, email TEXT, website TEXT, message TEXT, consent INTEGER, status TEXT DEFAULT 'new', created_at TEXT DEFAULT (datetime('now')));
+CREATE TABLE IF NOT EXISTS clients (id INTEGER PRIMARY KEY, prospect_id INTEGER, clinic_name TEXT, country TEXT, package TEXT, currency TEXT, setup_fee INTEGER, monthly_fee INTEGER, prepaid_until TEXT, go_live_at TEXT, status TEXT, created_at TEXT DEFAULT (datetime('now')));
+CREATE TABLE IF NOT EXISTS leads (id INTEGER PRIMARY KEY, client_id INTEGER NOT NULL, channel TEXT, name TEXT, contact TEXT, treatment TEXT, urgency TEXT, status TEXT, opted_out INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')), booked_at TEXT);
+CREATE TABLE IF NOT EXISTS invoices (id INTEGER PRIMARY KEY, client_id INTEGER, description TEXT, amount INTEGER, currency TEXT DEFAULT 'INR', status TEXT DEFAULT 'sent', razorpay_link_id TEXT, issued_at TEXT DEFAULT (datetime('now')));
+CREATE TABLE IF NOT EXISTS payments (id INTEGER PRIMARY KEY, invoice_id INTEGER, razorpay_payment_id TEXT UNIQUE NOT NULL, amount INTEGER NOT NULL, fee INTEGER DEFAULT 0, tax_on_fee INTEGER DEFAULT 0, currency TEXT, captured_at TEXT, refunded_amount INTEGER DEFAULT 0);
+CREATE TABLE IF NOT EXISTS expenses (id INTEGER PRIMARY KEY, date TEXT NOT NULL, item TEXT NOT NULL, category TEXT, amount_inr INTEGER NOT NULL, recurring TEXT, status TEXT NOT NULL DEFAULT 'planned');
+CREATE TABLE IF NOT EXISTS approvals (id INTEGER PRIMARY KEY, item TEXT, cost_inr INTEGER, reason TEXT, alternatives TEXT, status TEXT DEFAULT 'pending', requested_at TEXT DEFAULT (datetime('now')), decided_at TEXT);
+CREATE TABLE IF NOT EXISTS job_runs (key TEXT PRIMARY KEY, job TEXT, slot TEXT, status TEXT, attempts INTEGER DEFAULT 0, started_at TEXT, finished_at TEXT, error TEXT);
+CREATE TABLE IF NOT EXISTS dead_letters (id INTEGER PRIMARY KEY, job TEXT, payload TEXT, error TEXT, created_at TEXT DEFAULT (datetime('now')));
+CREATE TABLE IF NOT EXISTS alerts (alert_key TEXT PRIMARY KEY, category TEXT, first_sent_at TEXT, resolved_at TEXT);
+CREATE INDEX IF NOT EXISTS idx_leads_client ON leads(client_id);
+CREATE INDEX IF NOT EXISTS idx_payments_captured ON payments(captured_at);

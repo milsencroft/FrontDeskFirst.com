@@ -1,0 +1,17 @@
+{
+  "name": "b4app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "miniflare": "^4.20260730.0",
+    "wrangler": "^4.167.0"
+  },
+  "type": "module"
+}

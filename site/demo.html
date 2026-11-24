@@ -1,0 +1,36 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Try the demo | FrontDesk First</title><link rel="stylesheet" href="styles.css">
+<style>
+.phone{max-width:380px;margin:24px auto;border:1px solid var(--line);border-radius:24px;overflow:hidden;background:var(--soft)}
+.bar{background:var(--brand);color:var(--brand-ink);padding:12px 16px;font-weight:700}
+.chat{height:420px;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px}
+.msg{max-width:80%;padding:8px 12px;border-radius:12px;font-size:15px;line-height:1.4}
+.in{align-self:flex-start;background:var(--bg);border:1px solid var(--line)}.out{align-self:flex-end;background:var(--brand);color:var(--brand-ink)}
+.opts{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 14px}.opts button{border:1px solid var(--brand);background:var(--bg);color:var(--brand);border-radius:16px;padding:6px 12px;font:inherit;font-size:14px;cursor:pointer}
+.note{font-size:13px;color:var(--muted);text-align:center}
+</style></head><body>
+<header><div class="wrap"><a class="logo" href="index.html">FrontDesk<span>First</span></a><nav><a href="index.html#pricing">Pricing</a><a href="faq.html">FAQ</a></nav></div></header>
+<main class="wrap"><h1>See what your patients would see</h1>
+<p>This is a simulation of the WhatsApp conversation a patient gets after enquiring with a clinic that uses FrontDesk First. Tap the buttons as if you were the patient. Your clinic's real version uses your name, your treatments and replies you approve.</p>
+<div class="phone"><div class="bar">Sunrise Dental (demo)</div><div class="chat" id="chat"></div><div class="opts" id="opts"></div></div>
+<p class="note">Demo clinic and conversation are fictional. Nothing you tap is stored.</p>
+<p style="text-align:center"><a class="btn" href="index.html#contact">Start setup, pay only after go-live</a></p>
+</main>
+<script>
+const steps={
+start:{bot:["Hi, I'd like to know about braces for my daughter.","__patient"],next:"welcome"},
+welcome:{bot:["Hi! Thank you for contacting Sunrise Dental. We've received your message and our team will help you. To get you the right appointment, what is it about?"],opts:[["Braces / aligners","timing"],["Check-up / cleaning","timing"],["Implants","timing"],["Pain or emergency","pain"]]},
+pain:{bot:["We're sorry you're in pain. Please call us on 98xxxxxx10 now so we can see you as soon as possible. If it's after hours and severe, please go to the nearest emergency service."],opts:[["Start again","reset"]]},
+timing:{bot:["Thanks. When would you like to come in?"],opts:[["This week","book"],["Next week","book"],["Just exploring","explore"]]},
+book:{bot:["Great. Pick a time that suits you here: sunrisedental.example/book. We're at MG Road, open 10am to 8pm, Monday to Saturday."],opts:[["Booked, thanks!","done"],["Not now","followup"]]},
+explore:{bot:["No problem. Here's a short guide to the options and a booking link for when you're ready: sunrisedental.example/book"],opts:[["See the follow-up","followup"]]},
+followup:{bot:["(Next day) Hi, just checking if you found a convenient time. Here's the booking link again: sunrisedental.example/book. Reply STOP to opt out."],opts:[["Start again","reset"]]},
+done:{bot:["Wonderful, see you soon! You'll get a reminder the day before your visit."],opts:[["Start again","reset"]]}};
+const chat=document.getElementById('chat'),opts=document.getElementById('opts');
+function add(t,c){const d=document.createElement('div');d.className='msg '+c;d.textContent=t;chat.appendChild(d);chat.scrollTop=chat.scrollHeight;}
+function go(k){if(k==='reset'){chat.innerHTML='';return go('start');}const s=steps[k];opts.innerHTML='';
+if(k==='start'){add(s.bot[0],'out');return setTimeout(()=>go(s.next),700);}
+setTimeout(()=>{s.bot.forEach(t=>add(t,'in'));(s.opts||[]).forEach(([l,n])=>{const b=document.createElement('button');b.textContent=l;b.onclick=()=>{add(l,'out');go(n)};opts.appendChild(b);});},600);}
+go('start');
+</script>
+<footer><div class="wrap">&copy; 2026 FrontDesk First &middot; <a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms</a></div></footer></body></html>

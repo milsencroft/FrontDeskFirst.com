@@ -1,0 +1,21 @@
+name = "frontdeskfirst-core"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "frontdeskfirst-prod"
+database_id = "REPLACE_AFTER_CREATE"
+
+[triggers]
+# Free plan allows 5 cron triggers per account; we use 3.
+crons = ["*/15 * * * *", "30 14 * * *", "30 21 * * *"]
+
+[vars]
+SITE_URL = "https://frontdeskfirst.pages.dev"
+MONTHLY_BUDGET_INR = "2000"
+CLAUDE_SUBSCRIPTION_INR = "1999"
+REVENUE_TARGET_INR = "100000"
+LAUNCH_DATE = "2026-11-24"
+# Secrets (set with `wrangler secret put`): NTFY_TOPIC, RAZORPAY_WEBHOOK_SECRET,
+# GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN, REPORT_FROM, REPORT_TO, ADMIN_TOKEN
