@@ -13,6 +13,10 @@ export async function sendGmail(env, msg, fetchImpl = fetch) {
   if (!tok.ok) throw new Error(`gmail token HTTP ${tok.status}`);
   const { access_token } = await tok.json();
   const res = await fetchImpl('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', { method: 'POST', headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ raw: b64url(buildMime(msg)) }) });
-  if (!res.ok) throw new Error(`gmail send HTTP ${res.status}`);
+  if (!res.ok) {
+    let reason = '';
+    try { const e = (await res.json()).error || {}; reason = (e.details || []).map((d) => d.reason).filter(Boolean)[0] || (e.errors || [])[0]?.reason || e.status || ''; } catch {}
+    throw new Error(`gmail send HTTP ${res.status}${reason ? ` (${reason})` : ''}`);
+  }
   return { ok: true, id: (await res.json()).id };
 }
