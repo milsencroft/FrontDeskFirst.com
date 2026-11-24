@@ -4,9 +4,10 @@ import { makeDb } from './d1shim.js';
 import { createConsentLink, handleCallback, gmailRefreshToken, GMAIL_SCOPE } from '../src/lib/oauth.js';
 
 const env = (db) => ({ DB: db, SITE_URL: 'https://site.test', GMAIL_CLIENT_ID: 'cid', GMAIL_CLIENT_SECRET: 'sec', REPORT_FROM: 'frontdeskfirst@gmail.com' });
-const google = (email, { refresh = 'r1', scope = GMAIL_SCOPE } = {}) => async (url) => {
-  if (String(url).includes('oauth2.googleapis.com/token')) return { ok: true, status: 200, json: async () => ({ access_token: 'a', refresh_token: refresh, scope }) };
-  return { ok: true, status: 200, json: async () => ({ emailAddress: email }) };
+const idToken = (email) => ['x', Buffer.from(JSON.stringify({ email, email_verified: true })).toString('base64url'), 'sig'].join('.');
+const google = (email, { refresh = 'r1', scope = `openid ${GMAIL_SCOPE} https://www.googleapis.com/auth/userinfo.email` } = {}) => async (url) => {
+  if (String(url).includes('oauth2.googleapis.com/token')) return { ok: true, status: 200, json: async () => ({ access_token: 'a', refresh_token: refresh, scope, id_token: idToken(email) }) };
+  return { ok: false, status: 403, json: async () => ({}) };
 };
 const cb = (link, code = 'c') => new URL(`https://site.test/oauth/callback?code=${code}&state=${new URL(link).searchParams.get('state')}`);
 
@@ -15,6 +16,7 @@ test('oauth callback stores refresh token once, only for the configured mailbox'
   const link = await createConsentLink(e);
   assert.match(link, /redirect_uri=https%3A%2F%2Fsite.test%2Foauth%2Fcallback/);
   assert.match(link, /access_type=offline/);
+  assert.match(link, /scope=openid\+email\+/);
   const wrong = await handleCallback(e, cb(link), google('someone@gmail.com'));
   assert.equal(wrong.ok, false);
   assert.equal(await gmailRefreshToken(e), null);
