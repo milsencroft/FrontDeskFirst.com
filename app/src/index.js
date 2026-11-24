@@ -4,6 +4,7 @@ import { alertOnce, resolveAlert, sendNtfy } from './lib/ntfy.js';
 import { runJob } from './lib/jobs.js';
 import { collectReportData, renderReport } from './lib/report.js';
 import { sendGmail } from './lib/gmail.js';
+import { createConsentLink, handleCallback } from './lib/oauth.js';
 import { verifySignature, recordCapturedPayment } from './lib/razorpay.js';
 
 const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json' } });
@@ -17,6 +18,8 @@ export async function handleEnquiry(request, env) {
   if (!data.consent) return json({ ok: false, error: 'consent is required' }, 400);
   await env.DB.prepare('INSERT INTO inbound_leads (name, clinic, email, website, message, consent) VALUES (?, ?, ?, ?, ?, 1)')
     .bind(clean(data.name, 120), clean(data.clinic, 200), email, clean(data.website, 300), clean(data.message, 2000)).run();
+  // Plain HTML form posts get a thank-you page; JSON callers get JSON.
+  if (!ct.includes('application/json') && env.SITE_URL) return Response.redirect(`${env.SITE_URL}/thanks`, 303);
   return json({ ok: true });
 }
 
@@ -49,10 +52,10 @@ export async function healthCheck(env, fetchImpl = fetch) {
   }
 }
 
-export async function sendDailyReport(env, isoDay, fetchImpl) {
+export async function sendDailyReport(env, isoDay, fetchImpl, { test = false } = {}) {
   const data = await collectReportData(env.DB, env, isoDay);
-  const text = renderReport(data);
-  const sent = await sendGmail(env, { from: env.REPORT_FROM, to: env.REPORT_TO, subject: `Business 4 — Daily Business Performance Report — ${isoDay}`, text }, fetchImpl);
+  const text = (test ? 'TEST SEND: this is a test of the daily report. Figures are real as of now.\n\n' : '') + renderReport(data);
+  const sent = await sendGmail(env, { from: env.REPORT_FROM, to: env.REPORT_TO || env.REPORT_FROM, subject: `${test ? '[TEST] ' : ''}Business 4 — Daily Business Performance Report — ${isoDay}`, text }, fetchImpl);
   if (!sent.ok) throw new Error(sent.skipped || 'report not sent');
   return sent;
 }
@@ -95,9 +98,20 @@ export default {
       if (request.method === 'POST' && url.pathname === '/api/enquiry') return await handleEnquiry(request, env);
       if (request.method === 'POST' && url.pathname === '/webhooks/razorpay') return await handleRazorpay(request, env);
       if (url.pathname === '/health') return json({ ok: true });
-      if (url.pathname === '/admin/budget') {
+      if (request.method === 'GET' && url.pathname === '/oauth/callback') {
+        const r = await handleCallback(env, url);
+        return new Response(`<!doctype html><meta name="viewport" content="width=device-width"><title>FrontDesk First</title><p style="font:18px system-ui;max-width:32em;margin:3em auto">${r.ok ? '&#9989; ' : '&#9888;&#65039; '}${r.message.replace(/[<>&]/g, '')}</p>`,
+          { status: r.ok ? 200 : 400, headers: { 'content-type': 'text/html; charset=utf-8' } });
+      }
+      if (url.pathname.startsWith('/admin/')) {
         if (!env.ADMIN_TOKEN || request.headers.get('authorization') !== `Bearer ${env.ADMIN_TOKEN}`) return json({ ok: false }, 401);
-        return json(await budgetCheck(env));
+        if (url.pathname === '/admin/budget') return json(await budgetCheck(env));
+        if (request.method === 'POST' && url.pathname === '/admin/test-alert') return json(await sendNtfy(env, { category: 'automation', title: 'Test alert', message: 'FrontDesk First alerts are working. No action needed.' }));
+        if (request.method === 'POST' && url.pathname === '/admin/oauth-link') return json({ ok: true, url: await createConsentLink(env) });
+        if (request.method === 'POST' && url.pathname === '/admin/test-report') {
+          try { return json(await sendDailyReport(env, istDate(new Date()), fetch, { test: true })); } catch (e) { return json({ ok: false, error: String(e.message || e) }, 502); }
+        }
+        return json({ ok: false, error: 'not found' }, 404);
       }
       return json({ ok: false, error: 'not found' }, 404);
     } catch (e) {

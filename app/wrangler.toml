@@ -5,7 +5,7 @@ compatibility_date = "2026-11-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "frontdeskfirst-prod"
-database_id = "REPLACE_AFTER_CREATE"
+database_id = "2e5f26a4-b53b-42d3-863d-f2cd40875a6a"
 
 [triggers]
 # Free plan allows 5 cron triggers per account; we use 3.
